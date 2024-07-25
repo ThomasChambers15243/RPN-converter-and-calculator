@@ -2,13 +2,12 @@ mod rpn_convert;
 use rpn_convert::MathValue;
 use rpn_convert::shunting_yard::{
     OutQueue,
-    convert_numerical_in_to_post_fix,
-    convert_algebra_in_to_post_fix,
+    convert_in_to_post_fix,
 };
 
 pub fn solve_numerical(input: &str) -> Result<f64, Box<dyn std::error::Error>>{
     let mut total_stack:Vec<f64> = Vec::new();
-    let rpn_form: OutQueue = convert_numerical_in_to_post_fix(input)?;
+    let rpn_form: OutQueue = convert_in_to_post_fix(input)?;
     let form_iter = rpn_form.iter();
 
     for value in form_iter {
@@ -38,20 +37,8 @@ fn calculate(a: f64, b: f64, op: char) -> f64 {
 }
 
 #[allow(dead_code)]
-pub fn convert_in_to_post_fix(input: &str) -> Result<String, Box<dyn std::error::Error>> {
-    // Not a great way of doing it but its small.
-    // True for Alge
-    // False for num
-    
-    let conversion_type: bool = input.chars().any(|c| c.is_alphabetic());
- 
-    // Algebra
-    if conversion_type {
-        Ok(convert_algebra_in_to_post_fix(input)?.queue_as_string())
-    } else {
-    // Numerical
-        Ok(convert_numerical_in_to_post_fix(input)?.queue_as_string())
-    }
+pub fn get_rpn(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(convert_in_to_post_fix(input)?.queue_as_string())
 }
 
 

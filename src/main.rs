@@ -1,4 +1,4 @@
-use rpn::{solve_numerical, convert_in_to_post_fix};
+use rpn::{solve_numerical, get_rpn};
 use std::io;
 
 fn main() {    
@@ -24,7 +24,7 @@ fn main() {
             },
             "r" => {
                 io::stdin().read_line(&mut input).expect("Failed to read line");
-                match convert_in_to_post_fix(&input.trim()) {
+                match get_rpn(&input.trim()) {
                     Ok(answer) => println!("RPN form: {}\n", answer),
                     Err(e) => println!("Error: {}\n", e),
                 };

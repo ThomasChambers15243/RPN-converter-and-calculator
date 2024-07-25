@@ -2,6 +2,13 @@ use std::fmt::{self};
 use std::collections::{VecDeque, HashMap};
 use lazy_static::lazy_static;
 
+#[derive(Debug)]
+pub enum MathValue {
+    Num(f64),
+    Alge(String),
+    Op(char),
+}
+
 lazy_static! {
     static ref pres_map: HashMap<char, u8> = HashMap::from([
         ('^', 0),
@@ -10,13 +17,6 @@ lazy_static! {
         ('+', 2),
         ('-', 2)
     ]);
-}
-
-#[derive(Debug)]
-pub enum MathValue {
-    Num(f64),
-    Alge(String),
-    Op(char),
 }
 
 fn handle_non_op_token(token: &char, digit_tracker: &mut bool, number_as_string: &mut String) -> bool {
@@ -121,15 +121,18 @@ pub mod shunting_yard {
         }
     }
 
-    pub fn convert_numerical_in_to_post_fix(i: &str) -> Result<OutQueue, Box<dyn std::error::Error>> {
+    pub fn convert_in_to_post_fix(i: &str) -> Result<OutQueue, Box<dyn std::error::Error>> {
         let mut operators = OpStack::new();
         let mut output = OutQueue::new();
-
+        
         // Clean spaces from string
         let input = i.replace(' ', "");
-
+        
         let mut digit_tracker = false;
         let mut number_as_string: String = String::new();
+        
+        // True for alge, false for num
+        let conversion_type_has_alge: bool = input.chars().any(|c| c.is_alphabetic());
 
         // Loop through chars in input
         for token in input.chars() {
@@ -141,7 +144,11 @@ pub mod shunting_yard {
             // Convert string to f64 and push it to the output
             // Reset digit_tracker and number_as_string
             if digit_tracker {
-                output.push(MathValue::Num(number_as_string.parse::<f64>()?));
+                if conversion_type_has_alge {
+                    output.push(MathValue::Alge(number_as_string));
+                } else {
+                    output.push(MathValue::Num(number_as_string.parse::<f64>()?));
+                }
                 digit_tracker = false;
                 number_as_string = "".to_string();
             }
@@ -152,52 +159,17 @@ pub mod shunting_yard {
             }
         }
         if digit_tracker { 
-            output.push(MathValue::Num(number_as_string.parse::<f64>()?)); 
+            if conversion_type_has_alge {
+                output.push(MathValue::Alge(number_as_string))
+            } else {
+                output.push(MathValue::Num(number_as_string.parse::<f64>()?));
+            }
         }    
         while let Some(ops) = operators.pop() {
             output.push(ops);
         }
         Ok(output)
         
-    }
-
-    pub fn convert_algebra_in_to_post_fix(i: &str) -> Result<OutQueue, Box<dyn std::error::Error>> {
-        let mut operators = OpStack::new();
-        let mut output = OutQueue::new();
-
-        // Clean spaces from string
-        let input = i.replace(' ', "");
-
-        let mut digit_tracker = false;
-        let mut number_as_string: String = String::new();
-
-        // Loop through chars in input
-        for token in input.chars() {
-            // If digit
-            if handle_non_op_token(&token, &mut digit_tracker, &mut number_as_string) {
-                continue;
-            }
-
-            // Convert string to f64 and push it to the output
-            // Reset digit_tracker and number_as_string
-            if digit_tracker {
-                output.push(MathValue::Alge(number_as_string));
-                digit_tracker = false;
-                number_as_string = "".to_string();
-            }
-
-            // If Operator or Bracket 
-            if let Err(e) = handle_operators(&token, &mut operators, &mut output) {
-                return Err(e);
-            }
-        }
-        if digit_tracker { 
-            output.push(MathValue::Alge(number_as_string)); 
-        }    
-        while let Some(ops) = operators.pop() {
-            output.push(ops);
-        }
-        Ok(output)
     }
 
     fn handle_operators(token: &char, operators: &mut OpStack, output: &mut OutQueue) -> Result<(), Box<std::io::Error>> {
@@ -249,85 +221,80 @@ pub mod shunting_yard {
         fn simple_small() {
             let input = "5.2 + 8.0";
             let expected = "5.2 8 +";
-            assert_eq!(expected, convert_numerical_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
         }
 
         #[test]
         fn simple_large() {
             let input = "50 + 2342 - 234324.8";
             let expected = "50 2342 + 234324.8 -";
-            assert_eq!(expected, convert_numerical_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
         }
 
         #[test]
         fn complex_small() {
             let input = "40 + 4 - 1 / (9 * 99))";
             let expected = "40 4 + 1 9 99 * / -";
-            assert_eq!(expected, convert_numerical_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
         }
 
         #[test]
         fn complex_large() {
             let input = "42 - 4234 * (4-234 + (43*43)) - 10";
             let expected = "42 4234 4 234 - 43 43 * + * - 10 -";
-            assert_eq!(expected, convert_numerical_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
         }
 
         #[test]
         fn quadratic() {
             let input = "(31 + 321)*(32+54)";
             let expected = "31 321 + 32 54 + *";
-            assert_eq!(expected, convert_numerical_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
         }
 
         #[test]
         fn should_error() {
-            let input = "5+6a";
-            let expected = "invalid float literal";
-            assert_eq!(expected, convert_numerical_in_to_post_fix(input).unwrap_err().to_string());
+            let input = "5+6=a";
+            let expected = "Invalid operator: '='";
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap_err().to_string());
         }
-    }
 
-    #[cfg(test)]
-    mod convert_algrebra_in_to_post_fix_tests {
-    use super::*;
-
-    #[test]
-    fn simple_small() {
-        let input = "a+7b";
-        let expected = "a 7b +";
-        assert_eq!(expected, convert_algebra_in_to_post_fix(input).unwrap().to_string());
-    }
-    #[test]
-    fn simple_large() {
-        let input = "ab3213 + 131 - p * q";
-        let expected = "ab3213 131 + p q * -";
-        assert_eq!(expected, convert_algebra_in_to_post_fix(input).unwrap().to_string());
-    }
-    #[test]
-    fn complex_small() {
-        let input = "(x*x / (z-32.1c))";
-        let expected = "x x * z 32.1c - /";
-        assert_eq!(expected, convert_algebra_in_to_post_fix(input).unwrap().to_string());
-    }
-    #[test]
-    fn complex_large() {
-        let input = "c(a(b*b+1) - (d123.32/f9.23))";
-        let expected = "c a b b * 1 + d123.32 f9.23 / -";
-        assert_eq!(expected, convert_algebra_in_to_post_fix(input).unwrap().to_string());
-    }
-    #[test]
-    fn quadratic() {
-        let input = "(x + 87.31)*(x-31.23)";
-        let expected = "x 87.31 + x 31.23 - *";
-        assert_eq!(expected, convert_algebra_in_to_post_fix(input).unwrap().to_string());
-    }
-    // fn should_error() {
-    //     let input = "";
-    //     let expected = "";
-        
-    // }
-    }
+        #[test]
+        fn alge_simple_small() {
+            let input = "a+7b";
+            let expected = "a 7b +";
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+        }
+        #[test]
+        fn alge_simple_large() {
+            let input = "ab3213 + 131 - p * q";
+            let expected = "ab3213 131 + p q * -";
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+        }
+        #[test]
+        fn alge_complex_small() {
+            let input = "(x*x / (z-32.1c))";
+            let expected = "x x * z 32.1c - /";
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+        }
+        #[test]
+        fn alge_complex_large() {
+            let input = "c(a(b*b+1) - (d123.32/f9.23))";
+            let expected = "c a b b * 1 + d123.32 f9.23 / -";
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+        }
+        #[test]
+        fn alge_quadratic() {
+            let input = "(x + 87.31)*(x-31.23)";
+            let expected = "x 87.31 + x 31.23 - *";
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+        }
+        // fn should_error() {
+        //     let input = "";
+        //     let expected = "";
+            
+        // }
+        }
 }
 
 // Use post-traversal of a ast_tree to handle rpn
