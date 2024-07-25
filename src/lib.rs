@@ -36,7 +36,7 @@ fn calculate(a: f64, b: f64, op: char) -> f64 {
     }
 }
 
-#[allow(dead_code)]
+
 pub fn get_rpn(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     Ok(convert_in_to_post_fix(input)?.queue_as_string())
 }

@@ -1,5 +1,5 @@
 use std::fmt::{self};
-use std::collections::{VecDeque, HashMap};
+use std::collections::{HashMap};
 use lazy_static::lazy_static;
 
 #[derive(Debug)]
@@ -18,6 +18,60 @@ lazy_static! {
         ('-', 2)
     ]);
 }
+trait Push {
+    fn push(&mut self, token: MathValue);
+}
+
+struct Stack {
+    elements: Vec<MathValue>,
+}
+
+impl Stack {
+    fn new() -> Stack {
+        Stack {
+            elements: Vec::new(),
+        }
+    }    
+    fn iter(&self) -> StackIter {
+        StackIter { stack: self, index: 0}
+    }
+    fn pop(&mut self) -> Option<MathValue> {
+        self.elements.pop()
+    }
+    fn peak(&mut self) -> Option<&MathValue> {
+        if self.elements.is_empty(){
+            None
+        } else {
+            self.elements.last()
+        }
+    }
+}
+impl Push for Stack {
+    fn push(&mut self, token: MathValue) {
+        self.elements.push(token);
+    }  
+}
+
+pub struct StackIter<'a> {
+    stack: &'a Stack,
+    index: usize,
+}
+impl<'a> Iterator for StackIter<'a> {
+    type Item = &'a MathValue;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.stack.elements.len() {
+            let result = Some(
+                &self.stack.elements[self.index]
+            );
+            self.index += 1;
+            result
+        } else {
+            None
+        }
+    }
+
+}
 
 fn handle_non_op_token(token: &char, digit_tracker: &mut bool, number_as_string: &mut String) -> bool {
     match *token {
@@ -35,35 +89,20 @@ fn handle_non_op_token(token: &char, digit_tracker: &mut bool, number_as_string:
     }
 }
 
+fn push_conversion_type<T: Push>(target: &mut T, value: String, conversion_type: bool) -> Result<(), Box<dyn std::error::Error>> {
+    if conversion_type {
+        target.push(MathValue::Alge(value));
+    } else {
+        target.push(MathValue::Num(value.parse::<f64>()?));
+    }
+    Ok(())
+}
+
 // Uses shunting_yard algorithm to handle rpn
 pub mod shunting_yard {
     use super::*;
+    use std::collections::VecDeque;
         
-    struct OpStack {
-        elements: Vec<MathValue>,
-    }
-
-
-    impl OpStack {
-        fn new() -> OpStack {
-            OpStack {
-                elements: Vec::new(),
-            }
-        }
-        fn push(&mut self, token: MathValue) {
-            self.elements.push(token);
-        }
-        fn pop(&mut self) -> Option<MathValue> {
-            self.elements.pop()
-        }
-        fn peak(&mut self) -> Option<&MathValue> {
-            if self.elements.is_empty(){
-                None
-            } else {
-                self.elements.last()
-            }
-        }
-    }
     #[derive(Debug)]
     pub struct OutQueue {
         elements: VecDeque<MathValue>,
@@ -72,6 +111,12 @@ pub mod shunting_yard {
     impl fmt::Display for OutQueue {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "{}", self.queue_as_string())
+        }
+    }
+
+    impl Push for OutQueue {
+        fn push(&mut self, token: MathValue) {
+            self.elements.push_back(token);
         }
     }
 
@@ -108,7 +153,7 @@ pub mod shunting_yard {
         }
 
         pub fn queue_as_string(&self) -> String {
-            self.elements.iter().map(|token| 
+            self.iter().map(|token| 
                 match token {
                     MathValue::Op(ch) => ch.to_string(),
                     MathValue::Alge(al) => al.to_string(),
@@ -116,13 +161,10 @@ pub mod shunting_yard {
                 }
             ).collect::<Vec<String>>().join(" ")
         }
-        fn push(&mut self, token: MathValue) {
-            self.elements.push_back(token);
-        }
     }
 
     pub fn convert_in_to_post_fix(i: &str) -> Result<OutQueue, Box<dyn std::error::Error>> {
-        let mut operators = OpStack::new();
+        let mut operators = Stack::new();
         let mut output = OutQueue::new();
         
         // Clean spaces from string
@@ -144,11 +186,7 @@ pub mod shunting_yard {
             // Convert string to f64 and push it to the output
             // Reset digit_tracker and number_as_string
             if digit_tracker {
-                if conversion_type_has_alge {
-                    output.push(MathValue::Alge(number_as_string));
-                } else {
-                    output.push(MathValue::Num(number_as_string.parse::<f64>()?));
-                }
+                push_conversion_type(&mut output, number_as_string, conversion_type_has_alge)?;
                 digit_tracker = false;
                 number_as_string = "".to_string();
             }
@@ -159,11 +197,7 @@ pub mod shunting_yard {
             }
         }
         if digit_tracker { 
-            if conversion_type_has_alge {
-                output.push(MathValue::Alge(number_as_string))
-            } else {
-                output.push(MathValue::Num(number_as_string.parse::<f64>()?));
-            }
+            push_conversion_type(&mut output, number_as_string, conversion_type_has_alge)?;
         }    
         while let Some(ops) = operators.pop() {
             output.push(ops);
@@ -172,7 +206,7 @@ pub mod shunting_yard {
         
     }
 
-    fn handle_operators(token: &char, operators: &mut OpStack, output: &mut OutQueue) -> Result<(), Box<std::io::Error>> {
+    fn handle_operators(token: &char, operators: &mut Stack, output: &mut OutQueue) -> Result<(), Box<std::io::Error>> {
         match pres_map.get(&token) {            
             // Operators
             Some(pres) => {
@@ -298,29 +332,11 @@ pub mod shunting_yard {
 }
 
 // Use post-traversal of a ast_tree to handle rpn
+#[allow(dead_code)]
 pub mod ast_tree {
-    use core::num;
-
     use super::*;
-
-    struct Node {
-        data: MathValue,
-        left: Option<Box<Node>>,
-        right: Option<Box<Node>>,
-    }
-
-    impl Node {
-        fn new(self, data: MathValue) -> Node {
-            Node {
-                data: data,
-                left: None,
-                right: None,
-            }
-        }
-    }
-
     pub struct Parser {
-        tokens: Vec<MathValue>,
+        tokens: Stack,
     }
     impl fmt::Display for Parser {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -340,17 +356,20 @@ pub mod ast_tree {
             ).collect::<Vec<String>>().join(" ")
         }
 
-        pub fn try_from_nums(input: &str) -> Result<Parser, Box<dyn std::error::Error>> {
-            let mut tokens: Vec<MathValue> = Vec::new();
+        pub fn try_from(input: &str) -> Result<Parser, Box<dyn std::error::Error>> {
+            let mut tokens: Stack = Stack::new();
             let mut number_as_string = String::from("");
             let mut digit_tracker = false;
+
+            // True for alge, else false
+            let conversion_type_is_alge = input.chars().any(|c| c.is_alphabetic());
 
             for token in input.chars() {
                 if handle_non_op_token(&token, &mut digit_tracker, &mut number_as_string) {
                     continue;
                 }
                 if digit_tracker {
-                    tokens.push(MathValue::Num(number_as_string.parse::<f64>()?));
+                    push_conversion_type(&mut tokens, number_as_string, conversion_type_is_alge)?;
                     digit_tracker = false;
                     number_as_string = "".to_string();
                 }
@@ -358,14 +377,27 @@ pub mod ast_tree {
                 
             }
             if !number_as_string.is_empty() {
-                tokens.push(MathValue::Num(number_as_string.parse::<f64>()?));
+                if conversion_type_is_alge {}
+                push_conversion_type(&mut tokens, number_as_string, conversion_type_is_alge)?;
             }
             Ok(Parser{tokens})
         }
+    }
 
-        // pub fn try_from_alge(input: &str) -> Result<Parser, Box<dyn std::error::Error>> {
-        //     let mut tokens: Vec<MathValues> = Vec::new();
-        // }
+    struct Node {
+        data: MathValue,
+        left: Option<Box<Node>>,
+        right: Option<Box<Node>>,
+    }
+    
+    impl Node {
+        fn new(self, data: MathValue) -> Node {
+            Node {
+                data: data,
+                left: None,
+                right: None,
+            }
+        }
     }
 
 
@@ -381,12 +413,18 @@ pub mod ast_tree {
         fn parser_num() {
             let input = "2^3+(31*(7-6)/4)";
             let expected = "2 ^ 3 + ( 31 * ( 7 - 6 ) / 4 )";
-            assert_eq!(expected, Parser::try_from_nums(input).unwrap().parser_as_string());
+            assert_eq!(expected, Parser::try_from(input).unwrap().parser_as_string());
         }
-        // fn parser_alge() {
-        //     let input = "2x^y+(31*(x-6)/4a)";
-        //     let expected = "2x ^ y + ( 31 * ( x - 6 ) / 4a )";
-        //     assert_eq!(expected, Parser::try_from_alge(input).unwrap().parser_as_string());
-        // }
+        #[test]
+        fn parser_alge() {
+            let input = "2x^y+(31*(x-6)/4a)";
+            let expected = "2x ^ y + ( 31 * ( x - 6 ) / 4a )";
+            assert_eq!(expected, Parser::try_from(input).unwrap().parser_as_string());
+        }
+    }
+
+    #[cfg(test)]
+    mod AST_tests {
+
     }
 }
