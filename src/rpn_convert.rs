@@ -22,8 +22,20 @@ trait Push {
     fn push(&mut self, token: MathValue);
 }
 
-struct Stack {
+#[derive(Debug)]
+pub struct Stack {
     elements: Vec<MathValue>,
+}
+impl fmt::Display for Stack {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_string())
+    }
+}
+
+impl Push for Stack {
+    fn push(&mut self, token: MathValue) {
+        self.elements.push(token);
+    }  
 }
 
 impl Stack {
@@ -31,10 +43,47 @@ impl Stack {
         Stack {
             elements: Vec::new(),
         }
-    }    
-    fn iter(&self) -> StackIter {
+    }   
+    pub fn try_from(input: &str) -> Result<Stack, Box<dyn std::error::Error>> {
+        let mut stack = Stack::new();
+        let mut number_as_string = String::from("");
+        let mut digit_tracker = false;
+
+        // True for alge, else false
+        let conversion_type_is_alge = input.chars().any(|c| c.is_alphabetic());
+
+        for token in input.chars() {
+            if handle_non_op_token(&token, &mut digit_tracker, &mut number_as_string) {
+                continue;
+            }
+            if digit_tracker {
+                push_conversion_type(&mut stack, number_as_string, conversion_type_is_alge)?;
+                digit_tracker = false;
+                number_as_string = "".to_string();
+            }
+            stack.push(MathValue::Op(token));
+            
+        }
+        if !number_as_string.is_empty() {
+            if conversion_type_is_alge {}
+            push_conversion_type(&mut stack, number_as_string, conversion_type_is_alge)?;
+        }
+        Ok(stack)        
+    }
+    pub fn iter(&self) -> StackIter {
         StackIter { stack: self, index: 0}
     }
+    
+    pub fn as_string(&self) -> String {
+        self.iter().map(|el| 
+            match el {
+                MathValue::Num(num) => num.to_string(),
+                MathValue::Alge(al) => al.to_string(),
+                MathValue::Op(op) => op.to_string(),
+            }
+        ).collect::<Vec<String>>().join(" ")
+    }
+
     fn pop(&mut self) -> Option<MathValue> {
         self.elements.pop()
     }
@@ -46,11 +95,7 @@ impl Stack {
         }
     }
 }
-impl Push for Stack {
-    fn push(&mut self, token: MathValue) {
-        self.elements.push(token);
-    }  
-}
+
 
 pub struct StackIter<'a> {
     stack: &'a Stack,
@@ -101,74 +146,13 @@ fn push_conversion_type<T: Push>(target: &mut T, value: String, conversion_type:
 // Uses shunting_yard algorithm to handle rpn
 pub mod shunting_yard {
     use super::*;
-    use std::collections::VecDeque;
-        
-    #[derive(Debug)]
-    pub struct OutQueue {
-        elements: VecDeque<MathValue>,
-    }
 
-    impl fmt::Display for OutQueue {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.queue_as_string())
-        }
-    }
-
-    impl Push for OutQueue {
-        fn push(&mut self, token: MathValue) {
-            self.elements.push_back(token);
-        }
-    }
-
-    pub struct OutQueueIterator<'a> {
-        out_queue: &'a OutQueue,
-        index: usize,
-    }
-    impl<'a> Iterator for OutQueueIterator<'a> {
-        type Item = &'a MathValue;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.index < self.out_queue.elements.len() {
-                let result = Some(
-                    &self.out_queue.elements[self.index]
-                );
-                self.index += 1;
-                result
-            } else {
-                None
-            }
-        }
-
-    }
-
-    impl OutQueue {
-        fn new() -> OutQueue {
-            OutQueue {
-                elements: VecDeque::new(),
-            }
-        }
-
-        pub fn iter(&self) -> OutQueueIterator {
-            OutQueueIterator { out_queue:self, index: 0 }
-        }
-
-        pub fn queue_as_string(&self) -> String {
-            self.iter().map(|token| 
-                match token {
-                    MathValue::Op(ch) => ch.to_string(),
-                    MathValue::Alge(al) => al.to_string(),
-                    MathValue::Num(num) => num.to_string(),
-                }
-            ).collect::<Vec<String>>().join(" ")
-        }
-    }
-
-    pub fn convert_in_to_post_fix(i: &str) -> Result<OutQueue, Box<dyn std::error::Error>> {
+    pub fn convert_in_to_post_fix(input: &str) -> Result<Stack, Box<dyn std::error::Error>> {
         let mut operators = Stack::new();
-        let mut output = OutQueue::new();
+        let mut output = Stack::new();
         
         // Clean spaces from string
-        let input = i.replace(' ', "");
+        let input = input.replace(' ', "");
         
         let mut digit_tracker = false;
         let mut number_as_string: String = String::new();
@@ -206,7 +190,7 @@ pub mod shunting_yard {
         
     }
 
-    fn handle_operators(token: &char, operators: &mut Stack, output: &mut OutQueue) -> Result<(), Box<std::io::Error>> {
+    fn handle_operators(token: &char, operators: &mut Stack, output: &mut Stack) -> Result<(), Box<std::io::Error>> {
         match pres_map.get(&token) {            
             // Operators
             Some(pres) => {
@@ -255,35 +239,35 @@ pub mod shunting_yard {
         fn simple_small() {
             let input = "5.2 + 8.0";
             let expected = "5.2 8 +";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
 
         #[test]
         fn simple_large() {
             let input = "50 + 2342 - 234324.8";
             let expected = "50 2342 + 234324.8 -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
 
         #[test]
         fn complex_small() {
             let input = "40 + 4 - 1 / (9 * 99))";
             let expected = "40 4 + 1 9 99 * / -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
 
         #[test]
         fn complex_large() {
             let input = "42 - 4234 * (4-234 + (43*43)) - 10";
             let expected = "42 4234 4 234 - 43 43 * + * - 10 -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
 
         #[test]
         fn quadratic() {
             let input = "(31 + 321)*(32+54)";
             let expected = "31 321 + 32 54 + *";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().queue_as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
 
         #[test]
@@ -297,31 +281,31 @@ pub mod shunting_yard {
         fn alge_simple_small() {
             let input = "a+7b";
             let expected = "a 7b +";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         #[test]
         fn alge_simple_large() {
             let input = "ab3213 + 131 - p * q";
             let expected = "ab3213 131 + p q * -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         #[test]
         fn alge_complex_small() {
             let input = "(x*x / (z-32.1c))";
             let expected = "x x * z 32.1c - /";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         #[test]
         fn alge_complex_large() {
             let input = "c(a(b*b+1) - (d123.32/f9.23))";
             let expected = "c a b b * 1 + d123.32 f9.23 / -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         #[test]
         fn alge_quadratic() {
             let input = "(x + 87.31)*(x-31.23)";
             let expected = "x 87.31 + x 31.23 - *";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().to_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         // fn should_error() {
         //     let input = "";
@@ -400,7 +384,7 @@ pub mod ast_tree {
         }
     }
 
-
+    //fn convert_in_to_post_fix(input: &str) -> Result<
 
 
 
@@ -425,6 +409,6 @@ pub mod ast_tree {
 
     #[cfg(test)]
     mod AST_tests {
-
+        
     }
 }
