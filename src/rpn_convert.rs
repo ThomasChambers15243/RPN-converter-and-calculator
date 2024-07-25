@@ -19,6 +19,23 @@ pub enum MathValue {
     Op(char),
 }
 
+fn handle_non_op_token(token: &char, digit_tracker: &mut bool, number_as_string: &mut String) -> bool {
+    match *token {
+        '0'..='9' | '.' => {
+            number_as_string.push(*token);
+            *digit_tracker = true;
+            true 
+        },
+        'a'..='z' => {
+            number_as_string.push(*token);
+            *digit_tracker = true;
+            true
+        },
+        _ => false
+    }
+}
+
+// Uses shunting_yard algorithm to handle rpn
 pub mod shunting_yard {
     use super::*;
         
@@ -91,13 +108,13 @@ pub mod shunting_yard {
         }
 
         pub fn queue_as_string(&self) -> String {
-            self.elements.iter().map(|token| {
+            self.elements.iter().map(|token| 
                 match token {
                     MathValue::Op(ch) => ch.to_string(),
                     MathValue::Alge(al) => al.to_string(),
                     MathValue::Num(num) => num.to_string(),
                 }
-            }).collect::<Vec<String>>().join(" ")
+            ).collect::<Vec<String>>().join(" ")
         }
         fn push(&mut self, token: MathValue) {
             self.elements.push_back(token);
@@ -181,22 +198,6 @@ pub mod shunting_yard {
             output.push(ops);
         }
         Ok(output)
-    }
-
-    fn handle_non_op_token(token: &char, digit_tracker: &mut bool, number_as_string: &mut String) -> bool {
-        match *token {
-            '0'..='9' | '.' => {
-                number_as_string.push(*token);
-                *digit_tracker = true;
-                true 
-            },
-            'a'..='z' => {
-                number_as_string.push(*token);
-                *digit_tracker = true;
-                true
-            },
-            _ => false
-        }
     }
 
     fn handle_operators(token: &char, operators: &mut OpStack, output: &mut OutQueue) -> Result<(), Box<std::io::Error>> {
@@ -329,6 +330,96 @@ pub mod shunting_yard {
     }
 }
 
+// Use post-traversal of a ast_tree to handle rpn
 pub mod ast_tree {
-    
+    use core::num;
+
+    use super::*;
+
+    struct Node {
+        data: MathValue,
+        left: Option<Box<Node>>,
+        right: Option<Box<Node>>,
+    }
+
+    impl Node {
+        fn new(self, data: MathValue) -> Node {
+            Node {
+                data: data,
+                left: None,
+                right: None,
+            }
+        }
+    }
+
+    pub struct Parser {
+        tokens: Vec<MathValue>,
+    }
+    impl fmt::Display for Parser {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.parser_as_string())
+        }
+    }
+
+    impl Parser {
+
+        fn parser_as_string(&self) -> String {
+            self.tokens.iter().map(|el| 
+                match el {
+                    MathValue::Op(op) => op.to_string(),
+                    MathValue::Num(num) => num.to_string(),
+                    MathValue::Alge(al) => al.to_string(),
+                }
+            ).collect::<Vec<String>>().join(" ")
+        }
+
+        pub fn try_from_nums(input: &str) -> Result<Parser, Box<dyn std::error::Error>> {
+            let mut tokens: Vec<MathValue> = Vec::new();
+            let mut number_as_string = String::from("");
+            let mut digit_tracker = false;
+
+            for token in input.chars() {
+                if handle_non_op_token(&token, &mut digit_tracker, &mut number_as_string) {
+                    continue;
+                }
+                if digit_tracker {
+                    tokens.push(MathValue::Num(number_as_string.parse::<f64>()?));
+                    digit_tracker = false;
+                    number_as_string = "".to_string();
+                }
+                tokens.push(MathValue::Op(token));
+                
+            }
+            if !number_as_string.is_empty() {
+                tokens.push(MathValue::Num(number_as_string.parse::<f64>()?));
+            }
+            Ok(Parser{tokens})
+        }
+
+        // pub fn try_from_alge(input: &str) -> Result<Parser, Box<dyn std::error::Error>> {
+        //     let mut tokens: Vec<MathValues> = Vec::new();
+        // }
+    }
+
+
+
+
+
+
+
+    #[cfg(test)]
+    mod Parser_tests {
+        use super::*;
+        #[test]
+        fn parser_num() {
+            let input = "2^3+(31*(7-6)/4)";
+            let expected = "2 ^ 3 + ( 31 * ( 7 - 6 ) / 4 )";
+            assert_eq!(expected, Parser::try_from_nums(input).unwrap().parser_as_string());
+        }
+        // fn parser_alge() {
+        //     let input = "2x^y+(31*(x-6)/4a)";
+        //     let expected = "2x ^ y + ( 31 * ( x - 6 ) / 4a )";
+        //     assert_eq!(expected, Parser::try_from_alge(input).unwrap().parser_as_string());
+        // }
+    }
 }
