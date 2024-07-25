@@ -2,8 +2,8 @@ use rpn::{solve_numerical, convert_in_to_post_fix};
 use std::io;
 
 fn main() {    
-    let mut decision = String::new();
-    let mut input = String::new();
+    let mut decision: String;
+    let mut input: String;
     loop {
         println!("Enter your equation.\ns for solve (only numerical, not variables),\nr for RPN form (postfix),\nb | q to quit...");
         decision = "".to_string();

@@ -1,6 +1,7 @@
-mod shunting_yard;
-use shunting_yard::{
-    OutQueue,MathValue,
+mod rpn_convert;
+use rpn_convert::MathValue;
+use rpn_convert::shunting_yard::{
+    OutQueue,
     convert_numerical_in_to_post_fix,
     convert_algebra_in_to_post_fix,
 };
@@ -57,7 +58,7 @@ pub fn convert_in_to_post_fix(input: &str) -> Result<String, Box<dyn std::error:
 
 
 #[cfg(test)]
-mod tests {
+mod lib_tests {
     use super::*;
 
     #[test]
