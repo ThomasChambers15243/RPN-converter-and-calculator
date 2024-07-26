@@ -2,7 +2,9 @@ mod rpn_convert;
 use rpn_convert::{MathValue, Stack};
 use rpn_convert::shunting_yard::convert_in_to_post_fix;
 
-pub fn solve_numerical(input: &str) -> Result<f64, Box<dyn std::error::Error>>{
+use std::error::Error;
+
+pub fn solve_numerical(input: &str) -> Result<f64, Box<dyn Error>>{
     let mut total_stack:Vec<f64> = Vec::new();
     let rpn_form: Stack = convert_in_to_post_fix(input)?;
     let form_iter = rpn_form.iter();
@@ -34,7 +36,7 @@ fn calculate(a: f64, b: f64, op: char) -> f64 {
 }
 
 
-pub fn get_rpn(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_rpn(input: &str) -> Result<String, Box<dyn Error>> {
     Ok(convert_in_to_post_fix(input)?.as_string())
 }
 
