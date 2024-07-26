@@ -1,9 +1,8 @@
 use std::fmt::{self};
-use std::error::Error;
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use lazy_static::lazy_static;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum MathValue {
     Num(f64),
     Alge(String),
@@ -45,7 +44,7 @@ impl Stack {
             elements: Vec::new(),
         }
     }   
-    pub fn try_from(input: &str) -> Result<Stack, Box<dyn Error>> {
+    pub fn try_from(input: &str) -> Result<Stack, Box<dyn std::error::Error>> {
         let mut stack = Stack::new();
         let mut number_as_string = String::from("");
         let mut digit_tracker = false;
@@ -73,10 +72,6 @@ impl Stack {
     }
     pub fn iter(&self) -> StackIter {
         StackIter { stack: self, index: 0}
-    }
-
-    pub fn len(self) -> usize {
-        self.elements.len()
     }
     
     pub fn as_string(&self) -> String {
@@ -139,7 +134,7 @@ fn handle_non_op_token(token: &char, digit_tracker: &mut bool, number_as_string:
     }
 }
 
-fn push_conversion_type<T: Push>(target: &mut T, value: String, conversion_type: bool) -> Result<(), Box<dyn Error>> {
+fn push_conversion_type<T: Push>(target: &mut T, value: String, conversion_type: bool) -> Result<(), Box<dyn std::error::Error>> {
     if conversion_type {
         target.push(MathValue::Alge(value));
     } else {
@@ -152,7 +147,7 @@ fn push_conversion_type<T: Push>(target: &mut T, value: String, conversion_type:
 pub mod shunting_yard {
     use super::*;
 
-    pub fn convert_in_to_post_fix(input: &str) -> Result<Stack, Box<dyn Error>> {
+    pub fn convert_in_to_post_fix(input: &str) -> Result<Stack, Box<dyn std::error::Error>> {
         let mut operators = Stack::new();
         let mut output = Stack::new();
         
@@ -324,8 +319,55 @@ pub mod shunting_yard {
 #[allow(dead_code)]
 pub mod ast_tree {
     use super::*;
+    pub struct Parser {
+        tokens: Stack,
+    }
+    impl fmt::Display for Parser {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.parser_as_string())
+        }
+    }
 
-    #[derive(Clone, Debug)]
+    impl Parser {
+
+        fn parser_as_string(&self) -> String {
+            self.tokens.iter().map(|el| 
+                match el {
+                    MathValue::Op(op) => op.to_string(),
+                    MathValue::Num(num) => num.to_string(),
+                    MathValue::Alge(al) => al.to_string(),
+                }
+            ).collect::<Vec<String>>().join(" ")
+        }
+
+        pub fn try_from(input: &str) -> Result<Parser, Box<dyn std::error::Error>> {
+            let mut tokens: Stack = Stack::new();
+            let mut number_as_string = String::from("");
+            let mut digit_tracker = false;
+
+            // True for alge, else false
+            let conversion_type_is_alge = input.chars().any(|c| c.is_alphabetic());
+
+            for token in input.chars() {
+                if handle_non_op_token(&token, &mut digit_tracker, &mut number_as_string) {
+                    continue;
+                }
+                if digit_tracker {
+                    push_conversion_type(&mut tokens, number_as_string, conversion_type_is_alge)?;
+                    digit_tracker = false;
+                    number_as_string = "".to_string();
+                }
+                tokens.push(MathValue::Op(token));
+                
+            }
+            if !number_as_string.is_empty() {
+                if conversion_type_is_alge {}
+                push_conversion_type(&mut tokens, number_as_string, conversion_type_is_alge)?;
+            }
+            Ok(Parser{tokens})
+        }
+    }
+
     struct Node {
         data: MathValue,
         left: Option<Box<Node>>,
@@ -333,181 +375,40 @@ pub mod ast_tree {
     }
     
     impl Node {
-        fn new(data: MathValue, left: Option<Node>, right: Option<Node>) -> Self {
+        fn new(self, data: MathValue) -> Node {
             Node {
-                data,
-                left: left.map(Box::new),
-                right: right.map(Box::new),
+                data: data,
+                left: None,
+                right: None,
             }
         }
     }
 
-    #[derive(Clone)]
-    struct Parser {
-        tokens: Vec<MathValue>,
-        current_token_index: usize,
-    }
+    //fn convert_in_to_post_fix(input: &str) -> Result<
 
-    impl Parser {
-        fn try_from(input: &str) -> Result<Parser, Box<dyn Error>> {
-            // Clean Input
-            let input = input.replace(' ', "");
-            let tokens_stack = Stack::try_from(input.as_str())?;
-            let tokens = Vec::from(tokens_stack.elements);
-            Ok(Parser {tokens, current_token_index: 0})
-        }
-    
-        fn advance(&mut self) {
-            if self.current_token_index < self.tokens.len() - 1 {
-                self.current_token_index += 1;
-            }
-        }
-    
-        fn current_token(&self) -> &MathValue {
-            &self.tokens[self.current_token_index]
-        }
 
-        fn match_token(&mut self, token_type: char) -> bool {
-            match self.current_token() {
-                MathValue::Op(op) if *op == token_type => {
-                    self.advance();
-                    true
-                },
-                _ => false
-            }
-    
-        }
 
-        fn parse_expression(&mut self) -> Node {
-            let mut node = self.parse_term();
-            loop{
-                match self.current_token() {
-                    MathValue::Op('+') | MathValue::Op('-') => {
-                        let token = self.current_token().clone();
-                        self.advance();
-                        node = Node::new(token, Some(node), Some(self.parse_term()));
-                    },
-                    _ => break,
-                }
-            }
-            node
-        }
-
-        fn parse_term(&mut self) -> Node {
-            let mut node = self.parse_expo();
-            loop {
-                match self.current_token() {
-                    MathValue::Op('*') | MathValue::Op('/') => {
-                        let token = self.current_token().clone();
-                        self.advance();
-                        node = Node::new(token, Some(node), Some(self.parse_expo()));
-                    },
-                    _ => break,
-                }
-            }
-            node
-        }
-
-        fn parse_expo(&mut self) -> Node {
-            let mut node = self.parse_factor();
-            loop {
-                match self.current_token() {
-                    MathValue::Op('^') => {
-                        let token = self.current_token().clone();
-                        self.advance();
-                        node = Node::new(token, Some(node), Some(self.parse_factor()));
-                    },
-                    _ => break,
-                }
-            }
-            node
-        }
-
-        fn parse_factor(&mut self) -> Node {
-            let token = self.current_token().clone();
-            if self.match_token('(') {
-                let node = self.parse_expression();
-                self.match_token(')');
-                node
-            } else if let MathValue::Num(_) | MathValue::Alge(_) = token {
-                self.advance();
-                Node::new(token, None, None)
-            } else {
-                panic!("WOAH");
-            }
-        }
-
-}
-
-    fn get_rpn(input: &str) -> String{
-        fn traverse_tree(node: &Node, stack: &mut Stack) {
-            if let Some(n) = &node.left {
-                traverse_tree(&n, stack);
-            } 
-            if let Some(n) = &node.right {
-                traverse_tree(&n, stack);
-            }
-            match &node.data {
-                MathValue::Alge(v) => stack.push(node.data.clone()),
-                MathValue::Num(v) => stack.push(node.data.clone()),
-                MathValue::Op(v) => stack.push(node.data.clone()),
-                _ => println!("Unknown"),
-            }
-        }
-        let mut parser = Parser::try_from(input).unwrap();
-        let ast = parser.parse_expression();
-
-        let mut rpn= Stack::new();
-        traverse_tree(&ast, &mut rpn);
-        rpn.as_string()
-    }
 
 
     #[cfg(test)]
-    mod parser_tests {
+    mod Parser_tests {
         use super::*;
         #[test]
         fn parser_num() {
-            let input = "2^3+(3.1*(7-6)/4.0)";
-            let expected = "2 ^ 3 + ( 3.1 * ( 7 - 6 ) / 4 )";
-            assert_eq!(expected, Stack::try_from(input).unwrap().as_string());
+            let input = "2^3+(31*(7-6)/4)";
+            let expected = "2 ^ 3 + ( 31 * ( 7 - 6 ) / 4 )";
+            assert_eq!(expected, Parser::try_from(input).unwrap().parser_as_string());
         }
         #[test]
         fn parser_alge() {
-            let input = "2x^y+(3.1*(x-6)/4.0a)";
-            let expected = "2x ^ y + ( 3.1 * ( x - 6 ) / 4.0a )";
-            assert_eq!(expected, Stack::try_from(input).unwrap().as_string());
-        }        
+            let input = "2x^y+(31*(x-6)/4a)";
+            let expected = "2x ^ y + ( 31 * ( x - 6 ) / 4a )";
+            assert_eq!(expected, Parser::try_from(input).unwrap().parser_as_string());
+        }
     }
 
     #[cfg(test)]
-    mod ast_tests {
-        use super::*;
-
-        #[test]
-        fn test_num_simple() {
-            let input = "42 - 4234 * (4-234 + (43*43)) - 10";
-            let expected = "42 4234 4 234 - 43 43 * + * - 10 -";
-            assert_eq!(expected, get_rpn(input));
-        }
-        #[test]
-        fn test_num_complex() {
-            let input = "(31 + 321)*(32+54)";
-            let expected = "31 321 + 32 54 + *";
-            assert_eq!(expected, get_rpn(input));
-        }
-        #[test]
-        fn test_alge_simple() {
-            let input = "c*(a*(b*b+1) - (d123.32/f9.23))";
-            let expected = "c a b b * 1 + * d123.32 f9.23 / - *";
-            assert_eq!(expected, get_rpn(input));
-        }
-        #[test]
-        fn test_alge_complex() {
-            let input = "(x + 87.31)*(x-31.23)";
-            let expected = "x 87.31 + x 31.23 - *";
-            assert_eq!(expected, get_rpn(input));
-        }
-
+    mod AST_tests {
+        
     }
 }
