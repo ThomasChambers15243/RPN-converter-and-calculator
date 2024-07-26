@@ -7,9 +7,15 @@ edition = "2021"
 
 [dependencies]
 lazy_static = "1.4.0"
+criterion = "0.3"
 
 [profile.dev]
 opt-level = 0
 
 [profile.release]
 opt-level = 3
+
+# For criterion testing
+[[bench]]
+name = "benchmark"
+harness = false

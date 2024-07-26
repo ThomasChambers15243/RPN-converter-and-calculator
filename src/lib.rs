@@ -1,10 +1,14 @@
+
 mod rpn_convert;
 use rpn_convert::{MathValue, Stack};
-use rpn_convert::shunting_yard::convert_in_to_post_fix;
+use rpn_convert::{
+    shunting_yard,
+    ast_tree,
+};
 
 pub fn solve_numerical(input: &str) -> Result<f64, Box<dyn std::error::Error>>{
     let mut total_stack:Vec<f64> = Vec::new();
-    let rpn_form: Stack = convert_in_to_post_fix(input)?;
+    let rpn_form: Stack = shunting_yard::convert_in_to_post_fix(input)?;
     let form_iter = rpn_form.iter();
 
     for value in form_iter {
@@ -18,7 +22,7 @@ pub fn solve_numerical(input: &str) -> Result<f64, Box<dyn std::error::Error>>{
             MathValue::Alge(_al) => continue,
         }
     }
-    println!("RPN form is: {}", convert_in_to_post_fix(input)?);
+    println!("RPN form is: {}", shunting_yard::convert_in_to_post_fix(input)?);
     Ok(total_stack.pop().unwrap())
 }
 
@@ -34,8 +38,12 @@ fn calculate(a: f64, b: f64, op: char) -> f64 {
 }
 
 
-pub fn get_rpn(input: &str) -> Result<String, Box<dyn std::error::Error>> {
-    Ok(convert_in_to_post_fix(input)?.as_string())
+pub fn get_rpn_yard(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(shunting_yard::convert_in_to_post_fix(input)?.as_string())
+}
+
+pub fn get_rpn_tree(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(ast_tree::convert_in_to_post_fix(input)?.as_string())
 }
 
 

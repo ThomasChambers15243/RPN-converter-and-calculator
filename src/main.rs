@@ -1,5 +1,6 @@
-use rpn::{solve_numerical, get_rpn};
+use rpn::{solve_numerical, get_rpn_yard, get_rpn_tree};
 use std::io;
+mod rpn_convert;
 
 fn main() {    
     let mut decision: String;
@@ -24,7 +25,7 @@ fn main() {
             },
             "r" => {
                 io::stdin().read_line(&mut input).expect("Failed to read line");
-                match get_rpn(&input.trim()) {
+                match get_rpn_yard(&input.trim()) {
                     Ok(answer) => println!("RPN form: {}\n", answer),
                     Err(e) => println!("Error: {}\n", e),
                 };

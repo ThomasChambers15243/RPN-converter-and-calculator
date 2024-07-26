@@ -439,7 +439,7 @@ pub mod ast_tree {
 
 }
 
-    fn convert_in_to_post_fix(input: &str) -> Stack{
+    pub fn convert_in_to_post_fix(input: &str) -> Result<Stack, Box<dyn Error>>{
         // Uses an post traversal of an ast tree to produce the 
         // rpn
         fn traverse_tree(node: &Node, stack: &mut Stack) {
@@ -462,7 +462,7 @@ pub mod ast_tree {
         let ast = parser.parse_expression();
         traverse_tree(&ast, &mut rpn);
 
-        rpn
+        Ok(rpn)
     }
 
 
@@ -491,25 +491,25 @@ pub mod ast_tree {
         fn test_num_simple() {
             let input = "42 - 4234 * (4-234 + (43*43)) - 10";
             let expected = "42 4234 4 234 - 43 43 * + * - 10 -";
-            assert_eq!(expected, convert_in_to_post_fix(input).as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         #[test]
         fn test_num_complex() {
             let input = "(31 + 321)*(32+54)";
             let expected = "31 321 + 32 54 + *";
-            assert_eq!(expected, convert_in_to_post_fix(input).as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         #[test]
         fn test_alge_simple() {
             let input = "c*(a*(b*b+1) - (d123.32/f9.23))";
             let expected = "c a b b * 1 + * d123.32 f9.23 / - *";
-            assert_eq!(expected, convert_in_to_post_fix(input).as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         #[test]
         fn test_alge_complex() {
             let input = "(x + 87.31)*(x-31.23)";
             let expected = "x 87.31 + x 31.23 - *";
-            assert_eq!(expected, convert_in_to_post_fix(input).as_string());
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
 
     }
