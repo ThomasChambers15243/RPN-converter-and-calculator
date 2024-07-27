@@ -23,6 +23,65 @@ trait Push {
     fn push(&mut self, token: MathValue);
 }
 
+fn char_contained_in(ch: char, haystack: &str) -> bool {
+    haystack.chars().any(|c| c == ch)
+}
+
+pub fn validate_input(input: &str) ->(bool, &str) {
+    // Remove spaces
+    let input = input.replace(" ", "");
+    if input.len() < 3 {
+        return (false, "Enter atleast 3 elements");
+    }
+
+    // Check every value is either in pres_map, alpha, digit or bracket
+    if input.chars().any(|c| {
+        !(c.is_alphabetic() || c.is_ascii_digit()) && !char_contained_in(c, "()")
+    }) {
+        return (false, "Invalid Char");
+    }
+    
+    // Check correct number of brackets
+    let mut parentheses:Vec<char> = Vec::new();
+
+
+    for bracket in input.chars().filter(|b| char_contained_in(*b, "()")) {
+        match bracket {
+            '(' => parentheses.push(bracket),
+            ')' => {
+                if parentheses.pop().is_none() {
+                    return (false, "Invalid params");
+                }
+            },
+            _ => return (false, "Invalid params"),
+        }
+    }
+
+    (true, "okay")
+}
+
+#[cfg(test)]
+mod validate_input_tests {
+    use super::validate_input;
+
+    #[test]
+    fn less_than_3() {
+        let input = "";
+        let expected = (false,"Enter atleast 3 elements");
+        assert_eq!(expected, validate_input(input));
+    }
+    #[test]
+    fn invalid_char() {
+        let input = "3@5+7*(8+4)";
+        let expected = (false, "Invalid Char");
+        assert_eq!(expected, validate_input(input));
+    }
+    #[test]
+    fn invalid_params() {
+        
+    }
+}
+
 #[derive(Debug)]
 pub struct Stack {
     elements: Vec<MathValue>,
