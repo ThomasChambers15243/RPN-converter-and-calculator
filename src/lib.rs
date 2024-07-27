@@ -48,6 +48,13 @@ pub fn get_rpn_tree(input: &str) -> Result<String, Box<dyn std::error::Error>> {
 
 
 
+pub mod benchmark_setup {
+    pub fn test() -> bool {
+        true
+    }
+
+ }
+
 
 #[cfg(test)]
 mod lib_tests {

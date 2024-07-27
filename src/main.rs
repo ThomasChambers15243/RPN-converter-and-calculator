@@ -1,6 +1,19 @@
+#[allow(unused)]
 use rpn::{solve_numerical, get_rpn_yard, get_rpn_tree};
 use std::io;
 mod rpn_convert;
+
+
+// TODO
+/* 
+    [ ] Handle signed inputs
+    [ ] Validate input before conversion
+    [ ] Documentation...don't be lazy
+*/
+
+/* Notes
+    ctrl + shift + c opens new terminal
+*/ 
 
 fn main() {    
     let mut decision: String;

@@ -38,7 +38,7 @@ impl Push for Stack {
         self.elements.push(token);
     }  
 }
-
+#[allow(unused)]
 impl Stack {
     fn new() -> Stack {
         Stack {
@@ -149,6 +149,7 @@ fn push_conversion_type<T: Push>(target: &mut T, value: String, conversion_type:
 }
 
 // Uses shunting_yard algorithm to handle rpn
+#[allow(unused)]
 pub mod shunting_yard {
     use super::*;
 
@@ -433,28 +434,28 @@ pub mod ast_tree {
                 self.advance();
                 Node::new(token, None, None)
             } else {
-                panic!("WOAH");
+                panic!("Unknown Factor");
             }
         }
 
 }
 
+    fn traverse_tree(node: &Node, stack: &mut Stack) {
+        if let Some(n) = &node.left {
+            traverse_tree(&n, stack);
+        } 
+        if let Some(n) = &node.right {
+            traverse_tree(&n, stack);
+        }
+        match &node.data {
+            MathValue::Alge(_) => stack.push(node.data.clone()),
+            MathValue::Num(_) => stack.push(node.data.clone()),
+            MathValue::Op(_) => stack.push(node.data.clone()),
+        }
+    }
     pub fn convert_in_to_post_fix(input: &str) -> Result<Stack, Box<dyn Error>>{
         // Uses an post traversal of an ast tree to produce the 
         // rpn
-        fn traverse_tree(node: &Node, stack: &mut Stack) {
-            if let Some(n) = &node.left {
-                traverse_tree(&n, stack);
-            } 
-            if let Some(n) = &node.right {
-                traverse_tree(&n, stack);
-            }
-            match &node.data {
-                MathValue::Alge(_) => stack.push(node.data.clone()),
-                MathValue::Num(_) => stack.push(node.data.clone()),
-                MathValue::Op(_) => stack.push(node.data.clone()),
-            }
-        }
 
         let mut parser = Parser::try_from(input).unwrap();
         let mut rpn= Stack::new();
@@ -485,6 +486,8 @@ pub mod ast_tree {
 
     #[cfg(test)]
     mod ast_tests {
+        use shunting_yard::convert_in_to_post_fix;
+
         use super::*;
 
         #[test]
@@ -500,6 +503,12 @@ pub mod ast_tree {
             assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
         }
         #[test]
+        fn test_brackets() {
+            let input = "(4*((5+4)))^2";
+            let expected = "4 5 4 + * 2 ^";
+            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+        }
+        #[test]
         fn test_alge_simple() {
             let input = "c*(a*(b*b+1) - (d123.32/f9.23))";
             let expected = "c a b b * 1 + * d123.32 f9.23 / - *";
@@ -510,7 +519,7 @@ pub mod ast_tree {
             let input = "(x + 87.31)*(x-31.23)";
             let expected = "x 87.31 + x 31.23 - *";
             assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
+        }        
 
     }
 }
