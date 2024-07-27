@@ -3,8 +3,6 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rpn::{
     get_rpn_yard,
     get_rpn_tree,
-    // Unused
-    benchmark_setup::test,
     solve_numerical,
 };
 
