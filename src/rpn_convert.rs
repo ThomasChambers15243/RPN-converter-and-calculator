@@ -23,10 +23,33 @@ trait Push {
     fn push(&mut self, token: MathValue);
 }
 
-#[allow(unused)]
-struct Validate;
-#[allow(unused)]
+pub struct Validate;
 impl Validate {
+    pub fn validate_input(input: &str) ->(bool, &str) {
+        // Remove spaces
+        let input = input.replace(" ", "");
+        if !Self::validate_len(&input) {
+            return (false, "Enter atleast 3 elements");
+        }
+    
+        // Check every value is either in pres_map, alpha, digit or bracket
+        if !Self::validate_chars(&input){
+            return (false, "Invalid Char");
+        }
+    
+        // Check no sandwiched operators (a OP b)
+        if !Self::validate_sandwich_operators(&input) {
+            return (false, "Invalid order of operators");
+        }
+    
+        // Check correct number of brackets
+        if !Self::validate_parentheses(&input) {
+            return (false, "Invalid order of parentheses");
+        }
+    
+        (true, "Is_valid")
+    }
+
     fn char_contained_in(ch: char, haystack: &str) -> bool {
         haystack.chars().any(|c| c == ch)
     }
@@ -40,16 +63,16 @@ impl Validate {
         }
     }
 
-// NOT(a OR b) AND NOT C
-// NOT d AND NOT C
-// NOT((a OR b) OR C)
-
     fn validate_chars(input: &str) -> bool {
         if input.chars().any(|c| {
-            !(c.is_alphabetic() || c.is_ascii_digit() || 
+            !(
+            c.is_alphabetic() || 
+            c.is_ascii_digit() || 
             Self::char_contained_in(c, "()") || 
-            pres_map.contains_key(&c))
-        }) {
+            pres_map.contains_key(&c) ||
+            c == '.'
+            )}) 
+        {
             false
         } else {
             true
@@ -81,64 +104,7 @@ impl Validate {
                 _ => return false,
             }
         }
-        true
-    }
-}
-
-
-pub fn validate_input(input: &str) ->(bool, &str) {
-    // Remove spaces
-    let input = input.replace(" ", "");
-    if !Validate::validate_len(&input) {
-        return (false, "Enter atleast 3 elements");
-    }
-
-    // Check every value is either in pres_map, alpha, digit or bracket
-    if Validate::validate_chars(&input){
-        return (false, "Invalid Char");
-    }
-
-    // Check no sandwiched operators (a OP b)
-    if Validate::validate_sandwich_operators(&input) {
-        return (false, "Invalid order of operators");
-    }
-
-    // Check correct number of brackets
-    if Validate::validate_parentheses(&input) {
-        return (false, "Invalid order of parentheses");
-    }
-
-    (true, "Is_valid")
-}
-
-#[cfg(test)]
-mod validate_input_tests {
-    use super::*;
-
-    #[test]
-    fn less_than_3() {
-        let input_false = "";
-        let input_true = "2+3";
-        assert_eq!(true, Validate::validate_len(input_true));
-        assert_eq!(false, Validate::validate_len(input_false));
-    }
-    #[test]
-    fn invalid_char() {
-        let input_true = "3+8";
-        let input_false = "3@5+7*(8+4)";
-        assert_eq!(true, Validate::validate_chars(input_true));
-        assert_eq!(false, Validate::validate_chars(input_false));
-    }
-    #[test]
-    fn invalid_sandwich_operators() {
-        let input_true = "2+5-3*(5-2)";
-        let input_false = "2++5-3*(5--2)";
-        assert_eq!(true,  Validate::validate_sandwich_operators(input_true));
-        assert_eq!(false, Validate::validate_sandwich_operators(input_false))
-    }
-    #[test]
-    fn invalid_params() { 
-        
+        parentheses.is_empty()
     }
 }
 
@@ -165,6 +131,10 @@ impl Stack {
         }
     }   
     pub fn try_from(input: &str) -> Result<Stack, Box<dyn Error>> {
+        let (is_valid, msg) = Validate::validate_input(input);
+        if !is_valid {
+            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, msg)));
+        }
         let mut stack = Stack::new();
         let mut number_as_string = String::from("");
         let mut digit_tracker = false;
@@ -190,6 +160,7 @@ impl Stack {
         }
         Ok(stack)        
     }
+
     pub fn iter(&self) -> StackIter {
         StackIter { stack: self, index: 0}
     }
@@ -354,92 +325,7 @@ pub mod shunting_yard {
         }
         Ok(())
     }
-
-
-    #[cfg(test)]
-    mod convert_numerical_in_to_post_fix_tests {
-        use super::*;
-
-        #[test]
-        fn simple_small() {
-            let input = "5.2 + 8.0";
-            let expected = "5.2 8 +";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-
-        #[test]
-        fn simple_large() {
-            let input = "50 + 2342 - 234324.8";
-            let expected = "50 2342 + 234324.8 -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-
-        #[test]
-        fn complex_small() {
-            let input = "40 + 4 - 1 / (9 * 99))";
-            let expected = "40 4 + 1 9 99 * / -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-
-        #[test]
-        fn complex_large() {
-            let input = "42 - 4234 * (4-234 + (43*43)) - 10";
-            let expected = "42 4234 4 234 - 43 43 * + * - 10 -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-
-        #[test]
-        fn quadratic() {
-            let input = "(31 + 321)*(32+54)";
-            let expected = "31 321 + 32 54 + *";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-
-        #[test]
-        fn should_error() {
-            let input = "5+6=a";
-            let expected = "Invalid operator: '='";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap_err().to_string());
-        }
-
-        #[test]
-        fn alge_simple_small() {
-            let input = "a+7b";
-            let expected = "a 7b +";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        #[test]
-        fn alge_simple_large() {
-            let input = "ab3213 + 131 - p * q";
-            let expected = "ab3213 131 + p q * -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        #[test]
-        fn alge_complex_small() {
-            let input = "(x*x / (z-32.1c))";
-            let expected = "x x * z 32.1c - /";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        #[test]
-        fn alge_complex_large() {
-            let input = "c(a(b*b+1) - (d123.32/f9.23))";
-            let expected = "c a b b * 1 + d123.32 f9.23 / -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        #[test]
-        fn alge_quadratic() {
-            let input = "(x + 87.31)*(x-31.23)";
-            let expected = "x 87.31 + x 31.23 - *";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        // fn should_error() {
-        //     let input = "";
-        //     let expected = "";
-            
-        // }
-        }
 }
-
 // Use post-traversal of a ast_tree to handle rpn
 #[allow(dead_code)]
 pub mod ast_tree {
@@ -557,7 +443,7 @@ pub mod ast_tree {
             }
         }
 
-}
+    }
 
     fn traverse_tree(node: &Node, stack: &mut Stack) {
         if let Some(n) = &node.left {
@@ -584,61 +470,102 @@ pub mod ast_tree {
 
         Ok(rpn)
     }
+}
 
-
-    #[cfg(test)]
-    mod parser_tests {
-        use super::*;
-        #[test]
-        fn parser_num() {
-            let input = "2^3+(3.1*(7-6)/4.0)";
-            let expected = "2 ^ 3 + ( 3.1 * ( 7 - 6 ) / 4 )";
-            assert_eq!(expected, Stack::try_from(input).unwrap().as_string());
-        }
-        #[test]
-        fn parser_alge() {
-            let input = "2x^y+(3.1*(x-6)/4.0a)";
-            let expected = "2x ^ y + ( 3.1 * ( x - 6 ) / 4.0a )";
-            assert_eq!(expected, Stack::try_from(input).unwrap().as_string());
-        }        
+#[cfg(test)]
+mod validate_input_tests {
+    use super::*;
+    // Unit tests
+    #[test]
+    fn less_than_3() {
+        let input_true = "2a+3.1";
+        let input_false = "";
+        assert_eq!(true, Validate::validate_len(input_true));
+        assert_eq!(false, Validate::validate_len(input_false));
     }
-
-    #[cfg(test)]
-    mod ast_tests {
-        use shunting_yard::convert_in_to_post_fix;
-
-        use super::*;
-
-        #[test]
-        fn test_num_simple() {
-            let input = "42 - 4234 * (4-234 + (43*43)) - 10";
-            let expected = "42 4234 4 234 - 43 43 * + * - 10 -";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        #[test]
-        fn test_num_complex() {
-            let input = "(31 + 321)*(32+54)";
-            let expected = "31 321 + 32 54 + *";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        #[test]
-        fn test_brackets() {
-            let input = "(4*((5+4)))^2";
-            let expected = "4 5 4 + * 2 ^";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        #[test]
-        fn test_alge_simple() {
-            let input = "c*(a*(b*b+1) - (d123.32/f9.23))";
-            let expected = "c a b b * 1 + * d123.32 f9.23 / - *";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }
-        #[test]
-        fn test_alge_complex() {
-            let input = "(x + 87.31)*(x-31.23)";
-            let expected = "x 87.31 + x 31.23 - *";
-            assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
-        }        
-
+    #[test]
+    fn invalid_char() {
+        let input_true = "3.1+8a";
+        let input_false = "3@5+7*(8+4)";
+        assert_eq!(true, Validate::validate_chars(input_true));
+        assert_eq!(false, Validate::validate_chars(input_false));
     }
+    #[test]
+    fn invalid_sandwich_operators() {
+        let input_true = "2.1+5a-3*(5-2)";
+        let input_false = "2++5-3*(5--2)";
+        assert_eq!(true,  Validate::validate_sandwich_operators(input_true));
+        assert_eq!(false, Validate::validate_sandwich_operators(input_false));
+    }
+    #[test]
+    fn invalid_params() { 
+        let input_true = "(2.1+3)^2 -(3a+(4^32.3-1)+x^2)";
+        let input_false = "(2+3)^2 -(3+(4^32.3-1)+x^2))";
+        let input_false_2 = "(()";
+        let input_false_3 = "))((";
+        assert_eq!(true, Validate::validate_parentheses(input_true));        
+        assert_eq!(false, Validate::validate_parentheses(input_false));
+        assert_eq!(false, Validate::validate_parentheses(input_false_2));
+        assert_eq!(false, Validate::validate_parentheses(input_false_3));
+    }
+    // Integration Test
+    #[test]
+    fn validate_input_integration() {
+        assert_eq!((true, "Is_valid"), Validate::validate_input("2+5-1/7*2^(2-1)+a21"));
+    }
+}
+ 
+#[cfg(test)]
+mod parser_tests {
+    use super::*;
+    #[test]
+    fn parser_num() {
+        let input = "2^3+(3.1*(7-6)/4.0)";
+        let expected = "2 ^ 3 + ( 3.1 * ( 7 - 6 ) / 4 )";
+        assert_eq!(expected, Stack::try_from(input).unwrap().as_string());
+    }
+    #[test]
+    fn parser_alge() {
+        let input = "2x^y+(3.1*(x-6)/4.0a)";
+        let expected = "2x ^ y + ( 3.1 * ( x - 6 ) / 4.0a )";
+        assert_eq!(expected, Stack::try_from(input).unwrap().as_string());
+    }        
+}
+
+#[cfg(test)]
+mod ast_tests {
+    use shunting_yard::convert_in_to_post_fix;
+
+    use super::*;
+
+    #[test]
+    fn test_num_simple() {
+        let input = "42 - 4234 * (4-234 + (43*43)) - 10";
+        let expected = "42 4234 4 234 - 43 43 * + * - 10 -";
+        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+    }
+    #[test]
+    fn test_num_complex() {
+        let input = "(31 + 321)*(32+54)";
+        let expected = "31 321 + 32 54 + *";
+        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+    }
+    #[test]
+    fn test_brackets() {
+        let input = "(4*((5+4)))^2";
+        let expected = "4 5 4 + * 2 ^";
+        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+    }
+    #[test]
+    fn test_alge_simple() {
+        let input = "c*(a*(b*b+1) - (d123.32/f9.23))";
+        let expected = "c a b b * 1 + * d123.32 f9.23 / - *";
+        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+    }
+    #[test]
+    fn test_alge_complex() {
+        let input = "(x + 87.31)*(x-31.23)";
+        let expected = "x 87.31 + x 31.23 - *";
+        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+    }        
 }

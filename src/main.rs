@@ -6,8 +6,8 @@ mod rpn_convert;
 
 // TODO
 /* 
+    [X] Validate input before conversion
     [ ] Handle signed inputs
-    [ ] Validate input before conversion
     [ ] Documentation...don't be lazy
 */
 

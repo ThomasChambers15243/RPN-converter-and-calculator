@@ -1,7 +1,8 @@
 
 mod rpn_convert;
-use rpn_convert::{MathValue, Stack};
 use rpn_convert::{
+    Validate,
+    MathValue, Stack,
     shunting_yard,
     ast_tree,
 };
@@ -28,10 +29,10 @@ pub fn solve_numerical(input: &str) -> Result<f64, Box<dyn std::error::Error>>{
 
 fn calculate(a: f64, b: f64, op: char) -> f64 {
     match op {
-        '+' => a+b,
-        '-' => a-b,
-        '*' => a*b,
-        '/' => a/b,
+        '+' => a + b,
+        '-' => a - b,
+        '*' => a * b,
+        '/' => a / b,
         '^' => a.powf(b),
         _ => panic!("Invalid operations"),
     }
@@ -39,21 +40,23 @@ fn calculate(a: f64, b: f64, op: char) -> f64 {
 
 
 pub fn get_rpn_yard(input: &str) -> Result<String, Box<dyn std::error::Error>> {
-    Ok(shunting_yard::convert_in_to_post_fix(input)?.as_string())
+    let (is_valid, msg) = Validate::validate_input(input);
+    if is_valid {
+        Ok(shunting_yard::convert_in_to_post_fix(input)?.as_string())
+    } else {
+        Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, msg)))
+    }
 }
 
 pub fn get_rpn_tree(input: &str) -> Result<String, Box<dyn std::error::Error>> {
-    Ok(ast_tree::convert_in_to_post_fix(input)?.as_string())
+    let (is_valid, msg) = Validate::validate_input(input);
+    if is_valid {
+        Ok(ast_tree::convert_in_to_post_fix(input)?.as_string())
+    } else {
+        Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, msg)))
+    }
 }
 
-
-
-pub mod benchmark_setup {
-    pub fn test() -> bool {
-        true
-    }
-
- }
 
 
 #[cfg(test)]
