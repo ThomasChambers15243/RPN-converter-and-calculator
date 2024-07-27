@@ -23,61 +23,121 @@ trait Push {
     fn push(&mut self, token: MathValue);
 }
 
-fn char_contained_in(ch: char, haystack: &str) -> bool {
-    haystack.chars().any(|c| c == ch)
+#[allow(unused)]
+struct Validate;
+#[allow(unused)]
+impl Validate {
+    fn char_contained_in(ch: char, haystack: &str) -> bool {
+        haystack.chars().any(|c| c == ch)
+    }
+
+    fn validate_len(input: &str) -> bool{
+        let input = input.replace(" ", "");
+        if input.len() < 3 {
+            false
+        } else {
+            true
+        }
+    }
+
+// NOT(a OR b) AND NOT C
+// NOT d AND NOT C
+// NOT((a OR b) OR C)
+
+    fn validate_chars(input: &str) -> bool {
+        if input.chars().any(|c| {
+            !(c.is_alphabetic() || c.is_ascii_digit() || 
+            Self::char_contained_in(c, "()") || 
+            pres_map.contains_key(&c))
+        }) {
+            false
+        } else {
+            true
+        }
+    }
+
+    fn validate_sandwich_operators(input: &str) -> bool {
+        let mut iter = input.chars().peekable();
+        while let Some(first) = &iter.next() {
+            if let Some(second) = iter.peek() {
+                if pres_map.contains_key(first) && pres_map.contains_key(second) { 
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    fn validate_parentheses(input: &str) -> bool {
+        let mut parentheses:Vec<char> = Vec::new();
+        for bracket in input.chars().filter(|b| Self::char_contained_in(*b, "()")) {
+            match bracket {
+                '(' => parentheses.push(bracket),
+                ')' => {
+                    if parentheses.pop().is_none() {
+                        return false;
+                    }
+                },
+                _ => return false,
+            }
+        }
+        true
+    }
 }
+
 
 pub fn validate_input(input: &str) ->(bool, &str) {
     // Remove spaces
     let input = input.replace(" ", "");
-    if input.len() < 3 {
+    if !Validate::validate_len(&input) {
         return (false, "Enter atleast 3 elements");
     }
 
     // Check every value is either in pres_map, alpha, digit or bracket
-    if input.chars().any(|c| {
-        !(c.is_alphabetic() || c.is_ascii_digit()) && !char_contained_in(c, "()")
-    }) {
+    if Validate::validate_chars(&input){
         return (false, "Invalid Char");
     }
-    
-    // Check correct number of brackets
-    let mut parentheses:Vec<char> = Vec::new();
 
-
-    for bracket in input.chars().filter(|b| char_contained_in(*b, "()")) {
-        match bracket {
-            '(' => parentheses.push(bracket),
-            ')' => {
-                if parentheses.pop().is_none() {
-                    return (false, "Invalid params");
-                }
-            },
-            _ => return (false, "Invalid params"),
-        }
+    // Check no sandwiched operators (a OP b)
+    if Validate::validate_sandwich_operators(&input) {
+        return (false, "Invalid order of operators");
     }
 
-    (true, "okay")
+    // Check correct number of brackets
+    if Validate::validate_parentheses(&input) {
+        return (false, "Invalid order of parentheses");
+    }
+
+    (true, "Is_valid")
 }
 
 #[cfg(test)]
 mod validate_input_tests {
-    use super::validate_input;
+    use super::*;
 
     #[test]
     fn less_than_3() {
-        let input = "";
-        let expected = (false,"Enter atleast 3 elements");
-        assert_eq!(expected, validate_input(input));
+        let input_false = "";
+        let input_true = "2+3";
+        assert_eq!(true, Validate::validate_len(input_true));
+        assert_eq!(false, Validate::validate_len(input_false));
     }
     #[test]
     fn invalid_char() {
-        let input = "3@5+7*(8+4)";
-        let expected = (false, "Invalid Char");
-        assert_eq!(expected, validate_input(input));
+        let input_true = "3+8";
+        let input_false = "3@5+7*(8+4)";
+        assert_eq!(true, Validate::validate_chars(input_true));
+        assert_eq!(false, Validate::validate_chars(input_false));
     }
     #[test]
-    fn invalid_params() {
+    fn invalid_sandwich_operators() {
+        let input_true = "2+5-3*(5-2)";
+        let input_false = "2++5-3*(5--2)";
+        assert_eq!(true,  Validate::validate_sandwich_operators(input_true));
+        assert_eq!(false, Validate::validate_sandwich_operators(input_false))
+    }
+    #[test]
+    fn invalid_params() { 
         
     }
 }
