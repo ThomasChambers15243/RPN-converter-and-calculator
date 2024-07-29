@@ -7,8 +7,10 @@ mod rpn_convert;
 // TODO
 /* 
     [X] Validate input before conversion
-    [ ] Handle signed inputs
-    [ ] Documentation...don't be lazy
+    [X] Handle signed inputs
+    [ ] Change module organization 
+    [ ] Improved Testing
+    [ ] Write Documentation
 */
 
 /* Notes

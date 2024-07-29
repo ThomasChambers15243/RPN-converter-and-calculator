@@ -29,7 +29,7 @@ impl Validate {
         // Remove spaces
         let input = input.replace(" ", "");
         if !Self::validate_len(&input) {
-            return (false, "Enter atleast 3 elements");
+            return (false, "Enter at least 3 elements");
         }
     
         // Check every value is either in pres_map, alpha, digit or bracket
@@ -68,9 +68,8 @@ impl Validate {
             !(
             c.is_alphabetic() || 
             c.is_ascii_digit() || 
-            Self::char_contained_in(c, "()") || 
-            pres_map.contains_key(&c) ||
-            c == '.'
+            Self::char_contained_in(c, "().!") ||
+            pres_map.contains_key(&c)
             )}) 
         {
             false
@@ -79,12 +78,19 @@ impl Validate {
         }
     }
 
+    // Change for Sliding Window
     fn validate_sandwich_operators(input: &str) -> bool {
         let mut iter = input.chars().peekable();
         while let Some(first) = &iter.next() {
             if let Some(second) = iter.peek() {
                 if pres_map.contains_key(first) && pres_map.contains_key(second) { 
-                    return false;
+                    if let Some(third) = &iter.next() {
+                        if pres_map.contains_key(third) {
+                            continue;
+                        } else {
+                            return false;
+                        }
+                    }
                 }
             }
         }
@@ -225,6 +231,11 @@ fn handle_non_op_token(token: &char, digit_tracker: &mut bool, number_as_string:
             *digit_tracker = true;
             true
         },
+        '!' => {
+            number_as_string.push('-');
+            *digit_tracker = true;
+            true
+        }
         _ => false
     }
 }
@@ -493,8 +504,10 @@ mod validate_input_tests {
     #[test]
     fn invalid_sandwich_operators() {
         let input_true = "2.1+5a-3*(5-2)";
+        let input_true_1 = "2.1+-5a-3*(5-2)";
         let input_false = "2++5-3*(5--2)";
         assert_eq!(true,  Validate::validate_sandwich_operators(input_true));
+        assert_eq!(true,  Validate::validate_sandwich_operators(input_true_1));
         assert_eq!(false, Validate::validate_sandwich_operators(input_false));
     }
     #[test]
