@@ -246,9 +246,10 @@ fn push_conversion_type<T: Push>(target: &mut T, value: String, conversion_type:
     Ok(())
 }
 
+// Unit tests
+#[cfg(test)]
 mod validate_input_tests {
-    use super::*;
-    // Unit tests
+    use super::Validate;
     #[test]
     fn less_than_3() {
         let input_true = "2a+3.1";
@@ -286,4 +287,30 @@ mod validate_input_tests {
     fn validate_input_integration() {
         assert_eq!((true, "Is_valid"), Validate::validate_input("2+5-1/7*2^(2-1)+a21"));
     }
+}
+
+#[cfg(test)]
+mod rpn_convert_unit_tests {
+    use super::*;
+    type RpnReturn = Result<Stack, Box<dyn Error>>;
+
+    pub fn num_simple(func: fn(&str) -> RpnReturn) {
+        assert_eq!("42 4234 4 234 - 43 43 * + * - 10 -", func("42 - 4234 * (4-234 + (43*43)) - 10").unwrap().as_string());
+    }
+
+    pub fn num_complex(func: fn(&str) -> RpnReturn) {
+        assert_eq!("31 321 + 32 54 + *", func("(31 + 321)*(32+54)").unwrap().as_string());
+    }
+
+    pub fn brackets(func: fn(&str) -> RpnReturn) {
+        assert_eq!("4 5 4 + * 2 ^", func("(4*((5+4)))^2").unwrap().as_string());
+    }
+
+    pub fn alge_simple(func: fn(&str) -> RpnReturn) {
+        assert_eq!("c a b b * 1 + * d123.32 f9.23 / - *", func("c*(a*(b*b+1) - (d123.32/f9.23))").unwrap().as_string());
+    }
+
+    pub fn alge_complex(func: fn(&str) -> RpnReturn) {
+        assert_eq!("x 87.31 + x 31.23 - *", func("(x + 87.31)*(x-31.23)").unwrap().as_string());
+    }        
 }

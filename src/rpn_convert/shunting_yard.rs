@@ -82,3 +82,31 @@ fn handle_operators(token: &char, operators: &mut Stack, output: &mut Stack) -> 
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod shunting_yard_tests {
+    use super::*;
+    use shunting_yard::convert_in_to_post_fix;
+    use rpn_convert_unit_tests::*;
+
+    #[test]
+    fn test_num_simple() {
+        num_simple(convert_in_to_post_fix);
+    }
+    #[test]
+    fn test_num_complex() {
+        num_complex(convert_in_to_post_fix);
+    }
+    #[test]
+    fn test_brackets() {
+        brackets(convert_in_to_post_fix);
+    }
+    #[test]
+    fn test_alge_simple() {
+        alge_simple(convert_in_to_post_fix);
+    }
+    #[test]
+    fn test_alge_complex() {
+        alge_complex(convert_in_to_post_fix);
+    }        
+}

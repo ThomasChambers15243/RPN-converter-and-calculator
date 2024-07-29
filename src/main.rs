@@ -1,15 +1,13 @@
 #[allow(unused)]
 use rpn::{solve_numerical, get_rpn_yard, get_rpn_tree};
 use std::io;
-mod rpn_convert;
-
 
 // TODO
 /* 
     [X] Validate input before conversion
     [X] Handle signed inputs
     [X] Change module organization 
-    [ ] Improved Testing
+    [X] Improved Testing
     [ ] Write Documentation
 */
 

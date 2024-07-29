@@ -159,39 +159,29 @@ mod parser_tests {
 }
 
 #[cfg(test)]
-mod ast_tests {
-    use shunting_yard::convert_in_to_post_fix;
-
+mod ast_tree_tests {
     use super::*;
+    use ast_tree::convert_in_to_post_fix;
+    use rpn_convert_unit_tests::*;
 
     #[test]
     fn test_num_simple() {
-        let input = "42 - 4234 * (4-234 + (43*43)) - 10";
-        let expected = "42 4234 4 234 - 43 43 * + * - 10 -";
-        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+        num_simple(convert_in_to_post_fix);
     }
     #[test]
     fn test_num_complex() {
-        let input = "(31 + 321)*(32+54)";
-        let expected = "31 321 + 32 54 + *";
-        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+        num_complex(convert_in_to_post_fix);
     }
     #[test]
     fn test_brackets() {
-        let input = "(4*((5+4)))^2";
-        let expected = "4 5 4 + * 2 ^";
-        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+        brackets(convert_in_to_post_fix);
     }
     #[test]
     fn test_alge_simple() {
-        let input = "c*(a*(b*b+1) - (d123.32/f9.23))";
-        let expected = "c a b b * 1 + * d123.32 f9.23 / - *";
-        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+        alge_simple(convert_in_to_post_fix);
     }
     #[test]
     fn test_alge_complex() {
-        let input = "(x + 87.31)*(x-31.23)";
-        let expected = "x 87.31 + x 31.23 - *";
-        assert_eq!(expected, convert_in_to_post_fix(input).unwrap().as_string());
+        alge_complex(convert_in_to_post_fix);
     }        
 }

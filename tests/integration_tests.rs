@@ -1,6 +1,3 @@
-//use my_crate::solve_numerical;
-
-
 // Integration tests for rpn_convert
 #[cfg(test)]
 mod integration {
@@ -55,30 +52,38 @@ mod integration {
     }
 
 
-    mod test_get_rpn {
-        //use super::test_get_rpn::*;
+    mod test_get_rpn {        
         use rpn::{
             get_rpn_yard,
             get_rpn_tree
         };
-        type rpn_return = Result<String, Box<dyn std::error::Error>>;
 
-        pub fn negatives(func: fn(&str) -> rpn_return) {
+        /*
+            Defines the methods with the assertions. It
+            takes in the function to be tested. This way less
+            needs to be changed when adding,remnoving/changing
+            tests.
+        
+        */
+
+        type RpnReturn = Result<String, Box<dyn std::error::Error>>;
+
+        pub fn negatives(func: fn(&str) -> RpnReturn) {
             assert_eq!("-5 -5 + -1 *", 
             func("(!5+!5) * !1").unwrap());
         }
 
-        pub fn rpn_1(func: fn(&str) -> rpn_return) {
+        pub fn rpn_1(func: fn(&str) -> RpnReturn) {
             assert_eq!("31 321 + 32 54 + *", 
             func("(31 + 321)*(32+54)").unwrap());
         }
 
-        pub fn rpn_2(func: fn(&str) -> rpn_return) {
+        pub fn rpn_2(func: fn(&str) -> RpnReturn) {
             assert_eq!("c a b b * 1 + * d123.32 f9.23 / - *", 
             func("c*(a*(b*b+1) - (d123.32/f9.23))").unwrap());
         }
 
-        pub fn rpn_3(func: fn(&str) -> rpn_return) {
+        pub fn rpn_3(func: fn(&str) -> RpnReturn) {
             assert_eq!("-4.3a b 2 ^ -10 - x 1 2 / / * +",
             func("!4.3a + (b^2-!10)*(x/(1/2))").unwrap());
         }
