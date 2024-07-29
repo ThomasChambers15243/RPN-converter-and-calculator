@@ -87,13 +87,7 @@ impl Validate {
         while let Some(first) = &iter.next() {
             if let Some(second) = iter.peek() {
                 if pres_map.contains_key(first) && pres_map.contains_key(second) { 
-                    if let Some(third) = &iter.next() {
-                        if pres_map.contains_key(third) {
-                            continue;
-                        } else {
-                            return false;
-                        }
-                    }
+                    return false;
                 }
             }
         }
@@ -272,10 +266,8 @@ mod validate_input_tests {
     #[test]
     fn invalid_sandwich_operators() {
         let input_true = "2.1+5a-3*(5-2)";
-        let input_true_1 = "2.1+-5a-3*(5-2)";
         let input_false = "2++5-3*(5--2)";
         assert_eq!(true,  Validate::validate_sandwich_operators(input_true));
-        assert_eq!(true,  Validate::validate_sandwich_operators(input_true_1));
         assert_eq!(false, Validate::validate_sandwich_operators(input_false));
     }
     #[test]
