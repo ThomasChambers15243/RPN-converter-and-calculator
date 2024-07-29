@@ -34,6 +34,7 @@ fn calculate(a: f64, b: f64, op: char) -> f64 {
         '*' => a * b,
         '/' => a / b,
         '^' => a.powf(b),
+        '%' => a % b,
         _ => panic!("Invalid operations"),
     }
 }
