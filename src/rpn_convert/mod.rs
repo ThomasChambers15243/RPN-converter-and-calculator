@@ -71,7 +71,7 @@ impl Validate {
             !(
             c.is_alphabetic() || 
             c.is_ascii_digit() || 
-            Self::char_contained_in(c, "().!") ||
+            Self::char_contained_in(c, "().!¬") ||
             pres_map.contains_key(&c)
             )}) 
         {
@@ -228,7 +228,7 @@ fn handle_non_op_token(token: &char, digit_tracker: &mut bool, number_as_string:
             *digit_tracker = true;
             true
         },
-        '!' => {
+        '!' | '¬' => {
             number_as_string.push('-');
             *digit_tracker = true;
             true
