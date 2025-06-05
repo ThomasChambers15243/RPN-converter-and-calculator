@@ -3,7 +3,7 @@
 mod integration {
     // Solve Numerical
     mod test_solve_numerical {
-        use rpn::solve_numerical;
+        use rpn_lib::solve_numerical;
         #[test]    
         fn invalid_operation() {
             let error = solve_numerical("10=2").unwrap_err();
@@ -53,7 +53,7 @@ mod integration {
 
 
     mod test_get_rpn {        
-        use rpn::{
+        use rpn_lib::{
             get_rpn_yard,
             get_rpn_tree
         };

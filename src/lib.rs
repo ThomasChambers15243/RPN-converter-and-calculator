@@ -21,7 +21,7 @@
 //!};
 //! // prints -> x -321 - x -32 x - + *
 
-mod rpn_convert;
+pub mod rpn_convert;
     use rpn_convert::{
     Validate,
     MathValue, Stack,

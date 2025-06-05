@@ -1,5 +1,5 @@
 #[allow(unused)]
-use rpn::{solve_numerical, get_rpn_yard, get_rpn_tree};
+use rpn_lib::{solve_numerical, get_rpn_yard, get_rpn_tree};
 use std::io;
 
 fn main() {    
